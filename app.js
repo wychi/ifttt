@@ -31,6 +31,14 @@ if ('development' == app.get('env')) {
 app.get('/', routes.index);
 app.get('/users', user.list);
 
+app.get('/rss/ck101/:id', function(req, res) {
+  var bookId = req.param('id');
+  var ck101 = require('./ck101.js');
+
+  res.setHeader('Content-Type', 'application/rss+xml');
+  ck101.update(bookId, res);
+});
+
 http.createServer(app).listen(app.get('port'), function(){
   console.log('Express server listening on port ' + app.get('port'));
 });
