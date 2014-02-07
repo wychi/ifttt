@@ -33,7 +33,8 @@ app.get('/users', user.list);
 
 app.get('/rss/ck101/:id', function(req, res) {
   var bookId = req.param('id');
-  var ck101 = require('./ck101.js');
+  //var ck101 = require('./ck101.js');
+  var ck101 = require('./samples/test_cheerio.js');
 
   res.setHeader('Content-Type', 'application/rss+xml');
   ck101.update(bookId, res);

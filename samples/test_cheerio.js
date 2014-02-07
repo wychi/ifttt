@@ -3,13 +3,14 @@ var http = require('http')
   , zlib = require('zlib');
 var Q = require('q');
 var fs = require('fs');
+var RSS = require('rss');
 
 var getDB = function(bookId) {
   console.log('getDB ', bookId);
   var defer = Q.defer();
 
   var db = {};
-  var DB_PATH = ''+bookId+'.json';
+  var DB_PATH = 'tmpdb/'+bookId+'.json';
   if(fs.existsSync(DB_PATH)) {
     fs.readFile(DB_PATH, function(err, data) {
       if (err) throw err;
@@ -19,7 +20,7 @@ var getDB = function(bookId) {
   } else {
     console.log('first');
     db.bookId = bookId;
-    db.pageNum = 82;
+    db.pageNum = 999;
     db.filepath = DB_PATH;
 
     defer.resolve(db);
@@ -71,7 +72,7 @@ var doParse = function(html) {
   var cheerio = require('cheerio'),
       $ = cheerio.load(html);
   var bookTitle = $('h1.viewTitle').text();
-  var pageNum = $('#postlist .pg:last-child strong').text();
+  var pageNum = parseInt( $('#postlist .pg:last-child strong').text() );
   var hasNewPage = $('#postlist .pg:last-child :last-child').is('a');
 
   var items = $('.postList').map(function(i, elem) {
@@ -102,8 +103,9 @@ var doParse = function(html) {
 
 //fetch('2739729');
 //fetch('2843815');
+var all_items = [];
 var update = function(bookId) {
-  getDB(bookId)
+  return getDB(bookId)
   .then(function(db) {
     var bookId = db.bookId;
     var pageNum = db.pageNum;
@@ -122,11 +124,15 @@ var update = function(bookId) {
     var meta = doParse(html);
 
     var items = meta.items;
-    // for(var i=0;i<items.length;i++) {
-    //   var item = items[i];
-    //   console.log(item.id);
-    // }
+    for(var i=0;i<items.length;i++) {
+      var item = items[i];
+      console.log(item.id);
 
+      if(db.lastPost && item.id > db.lastPost)
+        all_items.push(item);
+    }
+
+    db.bookTitle = meta.bookTitle.replace(/\r\n|\t| /g, '');
     db.hasNewPage = meta.hasNewPage;
     db.pageNum = meta.pageNum;
     db.lastPost = items[items.length-1].id;
@@ -135,7 +141,9 @@ var update = function(bookId) {
   })
   .then(function(db) {
     if(db.hasNewPage) {
-      update(db.bookId);
+      return update(db.bookId);
+    } else {
+      return db;
     }
   })
   .fail(function(err) {
@@ -143,4 +151,43 @@ var update = function(bookId) {
   });
 }
 
-update('2594030');
+var newItems = [];
+
+exports.update = function(bookId, outStream) {
+  update(bookId).then(function(db) {
+    console.log('finish');
+    console.log(db);
+    if( all_items.length > 0) {
+      var feed_options = {
+        title: db.bookTitle,
+        author: 'unknown',
+      };
+      var feed = new RSS(feed_options);
+      // transform to RSS
+      for(var i=0; i<all_items.length; i++) {
+        var post = all_items[i];
+        var item = {};
+        item.title = post.title;
+        item.description = post.content;
+        item.date = post.pubDate;
+        item.guid = post.id;
+        item.url = 'http://ck101.com/thread-2739729-999-1.html/?id='+post.id;
+        feed.item(item);
+      }
+      return feed.xml();
+    }
+  })
+  .then(function(xml) {
+    var filepath = 'tmpdb/'+bookId+'.xml';
+    if(xml) {
+      fs.writeFileSync(filepath, xml);
+    }
+
+    if(fs.existsSync(filepath)) {
+      var rs = fs.createReadStream(filepath);
+      rs.pipe(outStream);
+    } else {
+      outStream.end();
+    }
+  });
+};
