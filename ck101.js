@@ -12,7 +12,7 @@ function Iterator(ctx) {
   this.pos = 0;
   this.nbegin = -1;
   this.nend = -1;
-  
+
   this.hasNext = function() {
     if( this.pos == -1)
       return false;
@@ -21,10 +21,10 @@ function Iterator(ctx) {
     if (this.nbegin != -1) {
       this.nend = this.ctx.indexOf(PATTERN_END, PATTERN_BEGIN.length + this.nbegin);
     }
- 
+
     return (this.nbegin != -1) && (this.nend != -1);
   };
-  
+
   this.next = function() {
     if (this.nbegin == -1 || this.nend == -1)
       throw "no next";
@@ -79,7 +79,7 @@ CK101Protocol.prototype._transform = function(chunk, encoding, done) {
     var id_b = post.indexOf('id="');
     var id_e = post.indexOf('"', id_b+4);
     id = post.substring(id_b+4, id_e);
-    
+
     // to parse title
     var contentPos = post.indexOf('>') + 1;
     var bodyPos = contentPos;
@@ -102,7 +102,7 @@ CK101Protocol.prototype._transform = function(chunk, encoding, done) {
           title = post.substring(titleBegin, titleEnd);
           bodyPos = titleEnd + pattern_e.length;
           break;
-        }    
+        }
       }
     }
 
@@ -130,12 +130,12 @@ CK101Protocol.prototype._transform = function(chunk, encoding, done) {
 
   }
   this.remains_ = iter.getRemains();
-  
+
   done();
 };
 
 CK101Protocol.prototype._flush = function(done) {
-  console.log('_flush'); 
+  console.log('_flush');
   this.push(this.feed.xml());
 
   done();
