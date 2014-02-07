@@ -126,10 +126,11 @@ var update = function(bookId) {
     var items = meta.items;
     for(var i=0;i<items.length;i++) {
       var item = items[i];
-      console.log(item.id);
 
-      if(db.lastPost && item.id > db.lastPost)
+      if(!db.lastPost || item.id > db.lastPost) {
+        console.log(db.lastPost, item.id);
         all_items.push(item);
+      }
     }
 
     db.bookTitle = meta.bookTitle.replace(/\r\n|\t| /g, '');
@@ -174,6 +175,8 @@ exports.update = function(bookId, outStream) {
         item.url = 'http://ck101.com/thread-2739729-999-1.html/?id='+post.id;
         feed.item(item);
       }
+
+      all_items = [];
       return feed.xml();
     }
   })
@@ -189,5 +192,8 @@ exports.update = function(bookId, outStream) {
     } else {
       outStream.end();
     }
+  })
+  .fail(function(err) {
+    console.log(err);
   });
 };
