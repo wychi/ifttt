@@ -80,12 +80,13 @@ var doParse = function(html) {
     var pid = $this.attr('id');
     var pubDate = $this.find('.userInfo em').text();
     var $body = $this.find('.postmessage');
-    var firstLine = $( $body.children()[0] );
+    var firstLine = $($body.contents()[0]).text();
+    //console.log(firstLine);
 
     var obj = {};
     obj.id = pid;
     obj.pubDate = pubDate;
-    obj.title = firstLine.text();
+    obj.title = firstLine;
     obj.content = $body.text();
     obj.pageNum = pageNum;
 
@@ -156,12 +157,19 @@ var newItems = [];
 
 exports.update = function(bookId, outStream) {
   update(bookId).then(function(db) {
-    console.log('finish');
-    console.log(db);
+    console.log('[update] #' + all_items.length);
     if( all_items.length > 0) {
+      var title = db.bookTitle;
+      var author = 'unknown';
+      var parsed = db.bookTitle.match(/([^\]】]+)作者[：]?(\S+).{1}連載中.{1}/);
+      console.log(parsed);
+      if (parsed && parsed.length == 3) {
+        title = parsed[1];
+        author = parsed[2];
+      }
       var feed_options = {
-        title: db.bookTitle,
-        author: 'unknown',
+        title: title,
+        author: author
       };
       var feed = new RSS(feed_options);
       // transform to RSS
@@ -172,7 +180,7 @@ exports.update = function(bookId, outStream) {
         item.description = post.content;
         item.date = post.pubDate;
         item.guid = post.id;
-        item.url = 'http://ck101.com/thread-2739729-999-1.html/?id='+post.id;
+        item.url = 'http://ck101.com/thread-' + bookId + '-' + post.pageNum + '-1.html/?id='+post.id;
         feed.item(item);
       }
 
